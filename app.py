@@ -160,6 +160,31 @@ def analyze_screenshot():
         final_risk, rule_score, ml_score, debug_info = calculate_risk_score(checks, parsed_data)
         verdict, verdict_reasons = determine_verdict(final_risk, record_match, parsed_data, checks)
 
+        # Optional Order Matching against expected merchant order
+        expected_amount_raw = request.form.get("expected_amount")
+        order_id = request.form.get("order_id")
+        order_match = {"checked": False, "matched": None, "expected_amount": None, "order_id": order_id}
+
+        if expected_amount_raw:
+            try:
+                expected_val = float(expected_amount_raw)
+                order_match["checked"] = True
+                order_match["expected_amount"] = expected_val
+                extracted_val = parsed_data.get("amount")
+                if extracted_val is not None:
+                    if abs(extracted_val - expected_val) <= 0.01:
+                        order_match["matched"] = True
+                    else:
+                        order_match["matched"] = False
+                        if verdict != "SUSPICIOUS":
+                            verdict = "SUSPICIOUS"
+                        verdict_reasons.insert(0, f"Order #{order_id or 'N/A'} mismatch: Expected ₹{expected_val:,.2f}, but screenshot displays ₹{extracted_val:,.2f}.")
+                else:
+                    order_match["matched"] = False
+                    verdict_reasons.insert(0, f"Order #{order_id or 'N/A'} comparison failed: Amount could not be extracted.")
+            except (ValueError, TypeError):
+                pass
+
         # Step 6: Log scan to database
         scan_log = {
             "scan_id": scan_id,
@@ -191,6 +216,7 @@ def analyze_screenshot():
             "extracted": parsed_data,
             "checks": checks,
             "record_match": record_match,
+            "order_match": order_match,
             "ela_image_url": f"/static/output/{ela_filename}",
             "mode": "demo" if _RECORD_PROVIDER.is_demo() else "production",
             "provider_name": record_match.get("provider_name"),

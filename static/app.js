@@ -1,7 +1,7 @@
 /**
- * CleanCheck Frontend Application Logic
+ * ProofPay Frontend Application Logic
+ * "Verify the payment. Not just the screenshot."
  * Parakram Hackathon 26
- * "Don't trust the screenshot. Verify the transaction."
  */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -24,6 +24,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnAnalyze = document.getElementById("btn-analyze");
     const samplesGrid = document.getElementById("samples-grid");
 
+    // Order matching inputs
+    const inputExpectedAmount = document.getElementById("input-expected-amount");
+    const inputOrderId = document.getElementById("input-order-id");
+
     // DOM Elements - Results & Progress
     const emptyState = document.getElementById("empty-state");
     const loadingState = document.getElementById("loading-state");
@@ -37,6 +41,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const verdictTitle = document.getElementById("verdict-title");
     const verdictBadge = document.getElementById("verdict-badge");
     const verdictSummary = document.getElementById("verdict-summary");
+    const riskLevelBadge = document.getElementById("risk-level-badge");
+    const orderMatchBanner = document.getElementById("order-match-banner");
+    const orderMatchIcon = document.getElementById("order-match-icon");
+    const orderMatchText = document.getElementById("order-match-text");
+
     const gaugeFill = document.getElementById("gauge-fill");
     const gaugeVal = document.getElementById("gauge-val");
     const scoreRule = document.getElementById("score-rule");
@@ -60,7 +69,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const elaHeatmapImg = document.getElementById("ela-heatmap-img");
     const checksList = document.getElementById("checks-list");
 
-    // DOM Elements - History & Ledger
+    // DOM Elements - History & Merchant Ledger
     const btnRefreshHistory = document.getElementById("btn-refresh-history");
     const historyTbody = document.getElementById("history-tbody");
     const btnRefreshLedger = document.getElementById("btn-refresh-ledger");
@@ -68,6 +77,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const ledgerCount = document.getElementById("ledger-count");
     const addLedgerForm = document.getElementById("add-ledger-form");
     const ledgerFormMsg = document.getElementById("ledger-form-msg");
+
+    // Merchant Summary Metrics
+    const metricTotalScans = document.getElementById("metric-total-scans");
+    const metricFlagged = document.getElementById("metric-flagged");
+    const metricDuplicates = document.getElementById("metric-duplicates");
 
     // ==========================================
     // 1. Navigation Tab Switching
@@ -90,7 +104,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Auto-refresh data on tab switch
             if (targetTab === "tab-history") loadScanHistory();
-            if (targetTab === "tab-ledger") loadDemoLedger();
+            if (targetTab === "tab-ledger") {
+                loadDemoLedger();
+                loadScanHistory();
+            }
         });
     });
 
@@ -139,7 +156,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function handleFileSelected(file) {
         if (!file.type.match(/^image\/(png|jpeg|webp)$/i) && !file.name.match(/\.(png|jpe?g|webp)$/i)) {
-            alert("Please upload a valid image file (PNG, JPG, or WEBP).");
+            alert("Please upload a valid image file (PNG, JPG, or JPEG).");
             return;
         }
 
@@ -199,6 +216,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
             card.addEventListener("click", async () => {
                 try {
+                    // Pre-fill expected order amount for demonstration
+                    if (s.id.includes("genuine")) {
+                        inputExpectedAmount.value = "750.00";
+                        inputOrderId.value = "ORD-101";
+                    } else if (s.id.includes("tampered")) {
+                        inputExpectedAmount.value = "750.00";
+                        inputOrderId.value = "ORD-101";
+                    } else {
+                        inputExpectedAmount.value = "";
+                        inputOrderId.value = "";
+                    }
+
                     // Fetch sample blob
                     const res = await fetch(s.url);
                     const blob = await res.blob();
@@ -234,11 +263,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Reset step tracker
         const stages = [
-            { step: 1, label: "Stage 1 of 5: Ingesting image and calculating perceptual hash..." },
+            { step: 1, label: "Stage 1 of 5: Ingesting image and computing perceptual hash..." },
             { step: 2, label: "Stage 2 of 5: Running OCR text extraction and currency parsing..." },
             { step: 3, label: "Stage 3 of 5: Performing Error Level Analysis & metadata inspection..." },
-            { step: 4, label: "Stage 4 of 5: Cross-checking UTR & amount against bank ledger..." },
-            { step: 5, label: "Stage 5 of 5: Computing hybrid ML risk score and final verdict..." },
+            { step: 4, label: "Stage 4 of 5: Matching against expected order & bank records..." },
+            { step: 5, label: "Stage 5 of 5: Computing hybrid ML risk score and final report..." },
         ];
 
         let currentStageIdx = 0;
@@ -269,6 +298,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const formData = new FormData();
         formData.append("image", file);
 
+        const expAmt = inputExpectedAmount ? inputExpectedAmount.value.trim() : "";
+        const orderId = inputOrderId ? inputOrderId.value.trim() : "";
+        if (expAmt) formData.append("expected_amount", expAmt);
+        if (orderId) formData.append("order_id", orderId);
+
         try {
             const response = await fetch("/api/analyze", {
                 method: "POST",
@@ -279,7 +313,7 @@ document.addEventListener("DOMContentLoaded", () => {
             clearInterval(stageInterval);
 
             // Complete step 5
-            setStage({ step: 5, label: "Stage 5 of 5: Complete!" });
+            setStage({ step: 5, label: "Stage 5 of 5: Analysis Complete!" });
 
             setTimeout(() => {
                 loadingState.classList.add("hidden");
@@ -287,6 +321,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 if (result.success) {
                     renderResult(result);
+                    // Refresh metrics in background
+                    loadScanHistory();
                 } else {
                     alert("Analysis error: " + (result.error || "Unknown server error."));
                     emptyState.classList.remove("hidden");
@@ -316,11 +352,11 @@ document.addEventListener("DOMContentLoaded", () => {
         verdictTitle.textContent = status;
 
         if (status === "VERIFIED") {
-            verdictBadge.textContent = "PAISE MIL GAYE • AUTHENTIC (पैसे खाते में आ चुके हैं)";
+            verdictBadge.textContent = "AUTHENTIC PAYMENT (पैसे खाते में आ चुके हैं)";
             verdictSummary.textContent = "Confirmed! Valid transaction record found in bank ledger and forensic integrity verified.";
             verdictIcon.innerHTML = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`;
         } else if (status === "SUSPICIOUS") {
-            verdictBadge.textContent = "FAKE / FRAUD • DO NOT ACCEPT (धोखाधड़ी - सामान मत दो)";
+            verdictBadge.textContent = "HIGH CONCERN / TAMPERED (धोखाधड़ी - सामान मत दो)";
             verdictSummary.textContent = "Warning! High forensic risk, record discrepancy, or duplicate screenshot detected.";
             verdictIcon.innerHTML = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
         } else {
@@ -329,9 +365,37 @@ document.addEventListener("DOMContentLoaded", () => {
             verdictIcon.innerHTML = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
         }
 
-        // B. Gauge Meter
+        // B. Risk Level Indicator
+        if (risk < 35) {
+            riskLevelBadge.textContent = "Low Concern";
+            riskLevelBadge.className = "risk-level-badge low";
+        } else if (risk < 60) {
+            riskLevelBadge.textContent = "Needs Review";
+            riskLevelBadge.className = "risk-level-badge medium";
+        } else {
+            riskLevelBadge.textContent = "High Concern";
+            riskLevelBadge.className = "risk-level-badge high";
+        }
+
+        // C. Optional Order Matching Banner
+        if (data.order_match && data.order_match.checked) {
+            orderMatchBanner.classList.remove("hidden");
+            if (data.order_match.matched) {
+                orderMatchBanner.className = "order-match-banner matched";
+                orderMatchIcon.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+                orderMatchText.innerHTML = `<span><strong>Order Amount Matched:</strong> Expected ₹${Number(data.order_match.expected_amount).toFixed(2)} matches screenshot claimed amount.</span>`;
+            } else {
+                orderMatchBanner.className = "order-match-banner mismatch";
+                orderMatchIcon.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+                const claimed = data.extracted?.amount ? `₹${Number(data.extracted.amount).toFixed(2)}` : "unreadable";
+                orderMatchText.innerHTML = `<span><strong>Order Mismatch Warning:</strong> Expected ₹${Number(data.order_match.expected_amount).toFixed(2)}, but screenshot displays ${claimed}.</span>`;
+            }
+        } else {
+            orderMatchBanner.classList.add("hidden");
+        }
+
+        // D. Gauge Meter
         gaugeVal.textContent = Math.round(risk);
-        // SVG dash length is 126
         const strokeOffset = Math.max(0, 126 - (126 * (risk / 100)));
         gaugeFill.style.strokeDashoffset = strokeOffset;
 
@@ -346,12 +410,12 @@ document.addEventListener("DOMContentLoaded", () => {
             gaugeVal.style.color = "var(--suspicious-crimson)";
         }
 
-        // C. Metrics
+        // E. Metrics
         scoreRule.textContent = `${data.rule_score}/100`;
         scoreMl.textContent = `${data.ml_score}/100`;
         scoreOcr.textContent = `${data.extracted?.parse_confidence || 0}%`;
 
-        // D. Verdict Reasons
+        // F. Verdict Reasons
         reasonsList.innerHTML = "";
         const reasons = data.verdict_reasons || [];
         if (reasons.length === 0) {
@@ -364,7 +428,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
 
-        // E. Extracted Details Table
+        // G. Extracted Details Table
         const ext = data.extracted || {};
         extractedAppBadge.textContent = ext.app_name || "UPI";
         detailAmount.textContent = ext.amount_formatted || (ext.amount ? `₹${ext.amount}` : "Not Found");
@@ -374,7 +438,7 @@ document.addEventListener("DOMContentLoaded", () => {
         detailSender.textContent = ext.sender || "Not Specified";
         detailReceiver.textContent = ext.receiver || "Merchant / Payee";
 
-        // F. Trusted Bank Match Card
+        // H. Trusted Bank Match Card
         const match = data.record_match || {};
         if (match.found && match.matched) {
             matchStatusBadge.className = "badge badge-emerald";
@@ -385,7 +449,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         <strong>Bank Ledger Match Confirmed</strong>
                         <p style="font-size:12px; margin-top:2px;">UTR: ${match.details.txn_id} &bull; Received Amount: ₹${Number(match.details.amount).toFixed(2)} &bull; ${match.details.timestamp}</p>
                     </div>
-                    <span class="badge badge-emerald">SUCCESS</span>
+                    <span class="badge badge-emerald">SETTLED</span>
                 </div>
             `;
         } else if (match.found && !match.matched) {
@@ -413,11 +477,11 @@ document.addEventListener("DOMContentLoaded", () => {
             `;
         }
 
-        // G. Forensic Visual Inspection (Original vs ELA Heatmap)
+        // I. Forensic Visual Inspection (Original vs ELA Heatmap)
         elaOrigImg.src = currentPreviewUrl;
         elaHeatmapImg.src = data.ela_image_url || currentPreviewUrl;
 
-        // H. Forensic Checks Breakdown
+        // J. Forensic Checks Breakdown
         renderForensicChecks(data.checks || []);
 
         // Scroll results into view
@@ -446,21 +510,33 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ==========================================
-    // 6. Scan History Tab Logic
+    // 6. Scan History & Dashboard Metrics Logic
     // ==========================================
     btnRefreshHistory.addEventListener("click", loadScanHistory);
 
     async function loadScanHistory() {
-        historyTbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">Refreshing scan history...</td></tr>`;
         try {
             const resp = await fetch("/api/history");
             const data = await resp.json();
             if (data.success && data.scans) {
                 renderScanHistory(data.scans);
+                updateDashboardMetrics(data.scans);
             }
         } catch (e) {
             historyTbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">Failed to load history: ${e.message}</td></tr>`;
         }
+    }
+
+    function updateDashboardMetrics(scans) {
+        if (!metricTotalScans) return;
+        metricTotalScans.textContent = scans.length;
+        const flagged = scans.filter(s => s.verdict === "SUSPICIOUS").length;
+        const dups = scans.filter(s => {
+            const r = JSON.stringify(s.verdict_reasons || []);
+            return r.toLowerCase().includes("duplicate");
+        }).length;
+        if (metricFlagged) metricFlagged.textContent = flagged;
+        if (metricDuplicates) metricDuplicates.textContent = dups;
     }
 
     function renderScanHistory(scans) {
@@ -496,7 +572,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ==========================================
-    // 7. Demo Ledger Tab Logic
+    // 7. Merchant Ledger Tab Logic
     // ==========================================
     btnRefreshLedger.addEventListener("click", loadDemoLedger);
 
@@ -514,7 +590,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function renderDemoLedger(records) {
-        ledgerCount.textContent = records.length;
+        if (ledgerCount) ledgerCount.textContent = records.length;
         if (!records || records.length === 0) {
             ledgerTbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">Ledger is empty. Add a custom entry using the form.</td></tr>`;
             return;
@@ -540,9 +616,9 @@ document.addEventListener("DOMContentLoaded", () => {
         e.preventDefault();
         const utr = document.getElementById("form-utr").value.trim();
         const amount = document.getElementById("form-amount").value.trim();
-        const payer = document.getElementById("form-payer").value.trim() || "Tester Customer";
+        const payer = document.getElementById("form-payer").value.trim() || "Customer";
         const payerVpa = document.getElementById("form-payer-vpa").value.trim() || "customer@okaxis";
-        const notes = document.getElementById("form-notes").value.trim() || "Live simulation";
+        const notes = document.getElementById("form-notes").value.trim() || "Simulated Payment";
 
         if (!utr || !amount) {
             showLedgerMsg("Please provide both UTR and Amount.", false);
@@ -585,4 +661,5 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Initial data load on startup
     loadSamples();
+    loadScanHistory();
 });
