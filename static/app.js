@@ -300,8 +300,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const expAmt = inputExpectedAmount ? inputExpectedAmount.value.trim() : "";
         const orderId = inputOrderId ? inputOrderId.value.trim() : "";
+        const manualUtr = document.getElementById("input-manual-utr") ? document.getElementById("input-manual-utr").value.trim() : "";
         if (expAmt) formData.append("expected_amount", expAmt);
         if (orderId) formData.append("order_id", orderId);
+        if (manualUtr) formData.append("manual_utr", manualUtr);
 
         try {
             const response = await fetch("/api/analyze", {
@@ -375,6 +377,60 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
             riskLevelBadge.textContent = "High Concern";
             riskLevelBadge.className = "risk-level-badge high";
+        }
+
+        // B2. 1-Click Bank Settlement Simulation Banner
+        const simulationBanner = document.getElementById("simulation-banner");
+        const simUtrDisplay = document.getElementById("sim-utr-display");
+        const simAmtDisplay = document.getElementById("sim-amt-display");
+        const btnQuickVerify = document.getElementById("btn-quick-verify");
+        const quickVerifyStatus = document.getElementById("quick-verify-status");
+
+        const extUtr = data.extracted?.txn_id;
+        const extAmt = data.extracted?.amount;
+
+        if (status === "UNVERIFIED" && extUtr && simulationBanner) {
+            simulationBanner.classList.remove("hidden");
+            if (simUtrDisplay) simUtrDisplay.textContent = extUtr;
+            if (simAmtDisplay) simAmtDisplay.textContent = extAmt ? `₹${Number(extAmt).toFixed(2)}` : "amount";
+            if (quickVerifyStatus) quickVerifyStatus.textContent = "";
+
+            if (btnQuickVerify) {
+                btnQuickVerify.disabled = false;
+                btnQuickVerify.onclick = async () => {
+                    btnQuickVerify.disabled = true;
+                    if (quickVerifyStatus) quickVerifyStatus.textContent = "Simulating bank credit in ledger...";
+                    try {
+                        const res = await fetch("/api/quick-verify", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                txn_id: extUtr,
+                                amount: extAmt || 500.0,
+                                payer_name: data.extracted?.sender || "Google Pay User",
+                                payer_vpa: "customer@okaxis",
+                            }),
+                        });
+                        const qData = await res.json();
+                        if (qData.success) {
+                            if (quickVerifyStatus) quickVerifyStatus.textContent = "Funds credited! Verifying...";
+                            setTimeout(() => {
+                                if (selectedFile) {
+                                    runAnalysis(selectedFile);
+                                }
+                            }, 500);
+                        } else {
+                            if (quickVerifyStatus) quickVerifyStatus.textContent = "Error: " + (qData.error || "Failed");
+                            btnQuickVerify.disabled = false;
+                        }
+                    } catch (e) {
+                        if (quickVerifyStatus) quickVerifyStatus.textContent = "Network error: " + e.message;
+                        btnQuickVerify.disabled = false;
+                    }
+                };
+            }
+        } else if (simulationBanner) {
+            simulationBanner.classList.add("hidden");
         }
 
         // C. Optional Order Matching Banner

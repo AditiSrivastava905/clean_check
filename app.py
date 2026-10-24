@@ -140,6 +140,23 @@ def analyze_screenshot():
         # Step 2: Semantic Parsing (Amount, UTR ID, Date, Parties, Status)
         parsed_data = parse_payment_details(ocr_result)
 
+        # Allow optional manual overrides/corrections from merchant form
+        manual_utr = request.form.get("manual_utr")
+        manual_amount = request.form.get("manual_amount")
+        if manual_utr and manual_utr.strip():
+            parsed_data["txn_id"] = manual_utr.strip()
+            if "missing_fields" in parsed_data and "txn_id" in parsed_data["missing_fields"]:
+                parsed_data["missing_fields"].remove("txn_id")
+        if manual_amount and manual_amount.strip():
+            try:
+                amt_val = float(str(manual_amount).replace("₹", "").replace(",", "").strip())
+                parsed_data["amount"] = amt_val
+                parsed_data["amount_formatted"] = f"₹{amt_val:,.2f}"
+                if "missing_fields" in parsed_data and "amount" in parsed_data["missing_fields"]:
+                    parsed_data["missing_fields"].remove("amount")
+            except ValueError:
+                pass
+
         # Step 3: Forensic Analysis (6 quantitative checks + ELA Heatmap)
         ela_filename = f"ela_{scan_id}.jpg"
         checks, phash_str = run_all_forensic_checks(
@@ -301,6 +318,43 @@ def manage_ledger():
             "records": records,
         }
     )
+
+
+@app.route("/api/quick-verify", methods=["POST"])
+def quick_verify():
+    """Adds a transaction directly to the trusted demo ledger so the user can test the full verification loop."""
+    data = request.get_json(silent=True) or request.form
+    txn_id = data.get("txn_id")
+    amount = data.get("amount")
+    payer_name = data.get("payer_name") or "Verified Demo Customer"
+    payer_vpa = data.get("payer_vpa") or "customer@okaxis"
+
+    if not txn_id or not amount:
+        return jsonify({"success": False, "error": "txn_id and amount are required."}), 400
+
+    try:
+        amt_val = float(str(amount).replace("₹", "").replace(",", "").strip())
+        record_id = insert_ledger_record(
+            {
+                "txn_id": str(txn_id).strip(),
+                "amount": amt_val,
+                "payer_name": payer_name,
+                "payer_vpa": payer_vpa,
+                "receiver_vpa": "shopeasy@hdfcbank",
+                "status": "SETTLED",
+                "app_source": data.get("app_source") or "Google Pay",
+                "notes": "Simulated bank settlement via 1-click verify",
+            }
+        )
+        return jsonify(
+            {
+                "success": True,
+                "message": f"UTR {txn_id} successfully added to trusted merchant bank records as SETTLED.",
+                "id": record_id,
+            }
+        )
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Failed to add ledger entry: {str(e)}"}), 400
 
 
 @app.route("/api/samples", methods=["GET"])

@@ -110,11 +110,11 @@
                         </div>
                     </div>
 
-                    <!-- Optional Order Matching Section -->
+                    <!-- Optional Order & UTR Matching Section -->
                     <div class="order-match-inputs">
                         <div class="inputs-toggle-header">
-                            <span class="inputs-title">Optional: Match Against Expected Order</span>
-                            <span class="inputs-badge">Order Verification</span>
+                            <span class="inputs-title">Optional Verification Helpers</span>
+                            <span class="inputs-badge">Order & UTR Match</span>
                         </div>
                         <div class="inputs-row">
                             <div class="input-field">
@@ -124,6 +124,10 @@
                             <div class="input-field">
                                 <label for="input-order-id">Order Reference / ID</label>
                                 <input type="text" id="input-order-id" placeholder="e.g. ORD-101">
+                            </div>
+                            <div class="input-field">
+                                <label for="input-manual-utr">12-Digit UTR (Optional fallback)</label>
+                                <input type="text" id="input-manual-utr" placeholder="Auto-detected via OCR" maxlength="16">
                             </div>
                         </div>
                     </div>
@@ -237,6 +241,27 @@
                         <div class="settlement-notice">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                             <span><strong>Payment Confirmation: Unverified with live bank settlement.</strong> A screenshot alone is never settlement proof. Only records credited to your actual bank account establish funds receipt.</span>
+                        </div>
+
+                        <!-- 1-Click Simulation Banner for Hackathon Demo / Unverified Receipts -->
+                        <div class="simulation-banner card hidden" id="simulation-banner">
+                            <div class="simulation-banner-header">
+                                <div class="simulation-icon-box">🏦</div>
+                                <div class="simulation-text">
+                                    <div class="simulation-title-row">
+                                        <h4>Simulate Bank Settlement (1-Click Test)</h4>
+                                        <span class="badge badge-emerald">Merchant Bank Action</span>
+                                    </div>
+                                    <p>Your uploaded screenshot has UTR: <strong id="sim-utr-display" class="font-mono">--</strong> for <strong id="sim-amt-display">₹--</strong>. In reality, money must reach your bank to be verified. Click below to simulate that your merchant account just received this money:</p>
+                                </div>
+                            </div>
+                            <div class="simulation-actions">
+                                <button type="button" class="btn btn-emerald" id="btn-quick-verify">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                                    <span>🏦 Simulate Bank Credit & Verify Immediately</span>
+                                </button>
+                                <span id="quick-verify-status" class="quick-status-msg"></span>
+                            </div>
                         </div>
 
                         <!-- Optional Order Match Result Banner -->

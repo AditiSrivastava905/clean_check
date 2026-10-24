@@ -56,6 +56,17 @@ def test_api_ledger_get_and_post(client):
     assert post_data["success"] is True
 
 
+def test_api_quick_verify(client):
+    quick_utr = f"43{str(uuid.uuid4().int)[:10]}"
+    resp = client.post(
+        "/api/quick-verify",
+        json={"txn_id": quick_utr, "amount": 500.0, "payer_name": "Demo User"},
+    )
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["success"] is True
+
+
 def test_api_samples(client):
     resp = client.get("/api/samples")
     assert resp.status_code == 200

@@ -43,6 +43,18 @@ def extract_amount(text: str) -> Tuple[Optional[float], Optional[str]]:
         except ValueError:
             pass
 
+    # Pattern 3: Prominent standalone decimal amounts e.g., 750.00, 1250.00
+    p3 = r"\b([0-9]{1,3}(?:,[0-9]{2,3})*\.[0-9]{2})\b"
+    matches3 = re.findall(p3, text)
+    for cand in matches3:
+        clean = cand.replace(",", "").strip()
+        try:
+            val = float(clean)
+            if 1.0 <= val <= 200000.0:
+                return val, f"₹{val:,.2f}"
+        except ValueError:
+            continue
+
     return None, None
 
 
