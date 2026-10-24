@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CleanCheck - Fake Payment Screenshot Verifier</title>
+    <meta name="description" content="CleanCheck detects fake UPI and bank transfer screenshots and verifies the transaction against trusted records. Don't trust the screenshot. Verify the transaction.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- Top Navigation Header -->
+    <header class="app-header">
+        <div class="header-container">
+            <div class="brand">
+                <div class="brand-logo-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        <path d="m9 12 2 2 4-4"/>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <span class="brand-title">CleanCheck</span>
+                    <span class="hackathon-tag">Parakram Hackathon 26</span>
+                </div>
+            </div>
+
+            <!-- Demo Mode Badge -->
+            <div class="demo-badge-container">
+                <span class="demo-indicator-dot"></span>
+                <span class="demo-badge-text" id="provider-badge">Demo mode: simulated trusted records</span>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <nav class="nav-tabs" role="tablist">
+                <button class="nav-tab-btn active" id="tab-check-btn" role="tab" aria-selected="true" data-tab="tab-check">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 12 2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+                    <span>Verify Screenshot</span>
+                </button>
+                <button class="nav-tab-btn" id="tab-history-btn" role="tab" aria-selected="false" data-tab="tab-history">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>Scan History</span>
+                </button>
+                <button class="nav-tab-btn" id="tab-ledger-btn" role="tab" aria-selected="false" data-tab="tab-ledger">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="7" y1="8" x2="17" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="13" y2="16"/></svg>
+                    <span>Demo Ledger</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-content">
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <h1 class="hero-headline">Don't trust the screenshot. <span class="gradient-text">Verify the transaction.</span></h1>
+            <p class="hero-subtext">
+                Screenshots can be edited in seconds with spoof apps or Photoshop. CleanCheck runs Error Level Analysis,
+                metadata inspection, and cross-checks payment details directly against verified bank records.
+            </p>
+        </section>
+
+        <!-- TAB 1: VERIFY SCREENSHOT -->
+        <section id="tab-check" class="tab-pane active" role="tabpanel">
+            <div class="check-grid">
+                <!-- Left Column: Upload & Quick Samples -->
+                <div class="upload-panel card">
+                    <div class="panel-header">
+                        <h2>Upload Screenshot</h2>
+                        <span class="badge">UPI / Bank / Wallet</span>
+                    </div>
+
+                    <!-- Dropzone -->
+                    <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Upload payment screenshot">
+                        <input type="file" id="file-input" accept="image/png, image/jpeg, image/webp, image/*" class="file-input-hidden">
+                        
+                        <div class="dropzone-default" id="dropzone-default">
+                            <div class="upload-icon-wrapper">
+                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="17 8 12 3 7 8"/>
+                                    <line x1="12" y1="3" x2="12" y2="15"/>
+                                </svg>
+                            </div>
+                            <p class="dropzone-primary-text">Upload Payment Screenshot / स्क्रीनशॉट चुनें</p>
+                            <p class="dropzone-secondary-text"><span class="browse-link">📸 Tap to select from Gallery or Camera</span></p>
+                            <span class="file-hint">PhonePe &bull; Google Pay &bull; Paytm &bull; BHIM &bull; Bank Transfer (Max 5 MB)</span>
+                        </div>
+
+                        <!-- Image Preview in Dropzone -->
+                        <div class="dropzone-preview hidden" id="dropzone-preview">
+                            <img id="preview-image" src="" alt="Screenshot preview" class="preview-img-el">
+                            <div class="preview-overlay">
+                                <span class="preview-name" id="preview-filename">image.png</span>
+                                <button type="button" class="btn-change-file" id="btn-change-file">Change Image</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Action Button -->
+                    <div class="action-btn-row">
+                        <button type="button" class="btn btn-primary" id="btn-analyze" disabled>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <span>Analyze & Verify Transaction</span>
+                        </button>
+                    </div>
+
+                    <!-- Sample Test Selector -->
+                    <div class="samples-section">
+                        <div class="samples-header">
+                            <span class="samples-title">⚡ Try Pre-Generated Demo Samples</span>
+                        </div>
+                        <p class="samples-desc">Click any scenario to test real-time detection:</p>
+                        <div class="samples-grid" id="samples-grid">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Verification Results & Analysis -->
+                <div class="results-panel card" id="results-panel">
+                    <!-- State A: Empty State -->
+                    <div class="empty-state" id="empty-state">
+                        <div class="empty-state-icon">
+                            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                <circle cx="8.5" cy="8.5" r="1.5"/>
+                                <polyline points="21 15 16 10 5 21"/>
+                            </svg>
+                        </div>
+                        <h3>No Screenshot Analyzed Yet</h3>
+                        <p>Upload a payment screenshot or select one of the demo samples on the left to inspect forensic signatures and verify transaction records.</p>
+                    </div>
+
+                    <!-- State B: Animated 5-Step Progress Loader -->
+                    <div class="loading-state hidden" id="loading-state">
+                        <div class="scanner-laser-container">
+                            <div class="scanner-preview-box">
+                                <img id="loading-preview-img" src="" alt="Scanning preview">
+                                <div class="laser-beam"></div>
+                            </div>
+                        </div>
+                        <h3 class="loading-title">Verifying Transaction Authenticity...</h3>
+                        <p class="loading-subtitle" id="current-stage-desc">Stage 1 of 5: Ingesting image...</p>
+
+                        <!-- Step Tracker -->
+                        <div class="step-tracker">
+                            <div class="tracker-step" id="step-1">
+                                <div class="step-circle">1</div>
+                                <span class="step-label">Upload</span>
+                            </div>
+                            <div class="tracker-line"></div>
+                            <div class="tracker-step" id="step-2">
+                                <div class="step-circle">2</div>
+                                <span class="step-label">OCR Extract</span>
+                            </div>
+                            <div class="tracker-line"></div>
+                            <div class="tracker-step" id="step-3">
+                                <div class="step-circle">3</div>
+                                <span class="step-label">Forensics & ELA</span>
+                            </div>
+                            <div class="tracker-line"></div>
+                            <div class="tracker-step" id="step-4">
+                                <div class="step-circle">4</div>
+                                <span class="step-label">Ledger Match</span>
+                            </div>
+                            <div class="tracker-line"></div>
+                            <div class="tracker-step" id="step-5">
+                                <div class="step-circle">5</div>
+                                <span class="step-label">Verdict</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- State C: Result View -->
+                    <div class="result-content hidden" id="result-content">
+                        <!-- Color Coded Verdict Banner -->
+                        <div class="verdict-banner" id="verdict-banner">
+                            <div class="verdict-icon" id="verdict-icon">
+                                <!-- Dynamic icon -->
+                            </div>
+                            <div class="verdict-texts">
+                                <div class="verdict-title-row">
+                                    <span class="verdict-title" id="verdict-title">VERIFIED</span>
+                                    <span class="verdict-badge" id="verdict-badge">AUTHENTIC MATCH</span>
+                                </div>
+                                <p class="verdict-summary" id="verdict-summary">Transaction record matched and confirmed in bank ledger.</p>
+                            </div>
+                        </div>
+
+                        <!-- Score & Confidence Overview Bar -->
+                        <div class="metrics-row">
+                            <!-- Gauge -->
+                            <div class="gauge-card">
+                                <div class="gauge-wrapper">
+                                    <svg viewBox="0 0 100 55" class="gauge-svg">
+                                        <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="9" stroke-linecap="round"/>
+                                        <path id="gauge-fill" d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#10b981" stroke-width="9" stroke-linecap="round" stroke-dasharray="126" stroke-dashoffset="126"/>
+                                    </svg>
+                                    <div class="gauge-val" id="gauge-val">0</div>
+                                </div>
+                                <div class="gauge-meta">
+                                    <span class="gauge-label">Forensic Risk Score</span>
+                                    <span class="gauge-legend">0 = Authentic | 100 = Severe Risk</span>
+                                </div>
+                            </div>
+
+                            <!-- Hybrid Score Details -->
+                            <div class="scoring-card">
+                                <div class="score-metric">
+                                    <span class="score-metric-label">Rule-Based Forensics</span>
+                                    <span class="score-metric-val" id="score-rule">--/100</span>
+                                </div>
+                                <div class="score-metric">
+                                    <span class="score-metric-label">ML Risk Classifier</span>
+                                    <span class="score-metric-val" id="score-ml">--/100</span>
+                                </div>
+                                <div class="score-metric">
+                                    <span class="score-metric-label">OCR Text Confidence</span>
+                                    <span class="score-metric-val" id="score-ocr">--%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Verdict Reasons List -->
+                        <div class="reasons-card" id="reasons-card">
+                            <h4>Verification Details & Reasons:</h4>
+                            <ul class="reasons-list" id="reasons-list">
+                                <!-- Dynamic reasons -->
+                            </ul>
+                        </div>
+
+                        <!-- Extracted Transaction Data Card -->
+                        <div class="extracted-details-card">
+                            <div class="section-title-row">
+                                <h4>Extracted Payment Details (OCR)</h4>
+                                <span class="badge" id="extracted-app-badge">UPI</span>
+                            </div>
+                            <div class="details-table-wrapper">
+                                <table class="details-table">
+                                    <tbody>
+                                        <tr>
+                                            <th>Claimed Amount</th>
+                                            <td id="detail-amount" class="highlight-val">--</td>
+                                            <th>Payment Status</th>
+                                            <td id="detail-status">--</td>
+                                        </tr>
+                                        <tr>
+                                            <th>UPI Ref / UTR ID</th>
+                                            <td id="detail-utr" class="font-mono">--</td>
+                                            <th>Date & Time</th>
+                                            <td id="detail-date">--</td>
+                                        </tr>
+                                        <tr>
+                                            <th>Sender</th>
+                                            <td id="detail-sender">--</td>
+                                            <th>Receiver</th>
+                                            <td id="detail-receiver">--</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Trusted Record Match Result Card -->
+                        <div class="record-match-card" id="record-match-card">
+                            <div class="section-title-row">
+                                <h4>Trusted Bank Records Match</h4>
+                                <span class="badge badge-outline" id="match-status-badge">Checking...</span>
+                            </div>
+                            <div id="match-details-body">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Side-by-Side: Original Screenshot vs ELA Heatmap -->
+                        <div class="forensics-visual-card">
+                            <div class="section-title-row">
+                                <h4>Forensic Visual Inspection (ELA Heatmap)</h4>
+                                <span class="info-tooltip" title="Error Level Analysis detects regions with inconsistent compression levels, identifying digital alterations or pasted numbers.">ℹ️ What is ELA?</span>
+                            </div>
+                            <p class="ela-explanation">
+                                High localized brightness or rainbow spikes on the heatmap indicate tampered text or altered amounts.
+                            </p>
+                            <div class="visual-comparison-grid">
+                                <div class="visual-box">
+                                    <span class="visual-tag">Original Screenshot</span>
+                                    <div class="img-zoom-container">
+                                        <img id="ela-orig-img" src="" alt="Original upload">
+                                    </div>
+                                </div>
+                                <div class="visual-box">
+                                    <span class="visual-tag tag-ela">ELA Error Heatmap</span>
+                                    <div class="img-zoom-container">
+                                        <img id="ela-heatmap-img" src="" alt="Error level analysis heatmap">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Detailed Forensic Checks List -->
+                        <div class="forensic-checks-card">
+                            <h4>Forensic Checks Breakdown (6 Engines)</h4>
+                            <div class="checks-list" id="checks-list">
+                                <!-- Dynamic check cards -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: SCAN HISTORY -->
+        <section id="tab-history" class="tab-pane" role="tabpanel">
+            <div class="history-container card">
+                <div class="panel-header">
+                    <div>
+                        <h2>Verification History</h2>
+                        <p class="history-sub">Audit trail of all processed screenshots and perceptual hashes.</p>
+                    </div>
+                    <button class="btn btn-secondary" id="btn-refresh-history">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                        <span>Refresh</span>
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Scan ID</th>
+                                <th>Timestamp</th>
+                                <th>Claimed Amount</th>
+                                <th>UTR / Txn ID</th>
+                                <th>Risk Score</th>
+                                <th>Verdict</th>
+                                <th>Reasons Summary</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-tbody">
+                            <tr><td colspan="7" class="text-center py-4 text-muted">Loading scan history...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: DEMO LEDGER -->
+        <section id="tab-ledger" class="tab-pane" role="tabpanel">
+            <div class="ledger-container">
+                <div class="ledger-banner-card card">
+                    <div class="ledger-banner-content">
+                        <div class="banner-badge">Demo Mode: Simulated Trusted Records</div>
+                        <h2>Simulated Merchant Bank Ledger</h2>
+                        <p>
+                            In production, CleanCheck verifies payments directly against authorized Bank Statement Webhooks or NPCI UPI APIs.
+                            For this hackathon prototype, CleanCheck queries this simulated SQLite ledger containing realistic merchant transactions.
+                            <strong>You can insert custom records below to test live payment simulations.</strong>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="ledger-grid">
+                    <!-- Insert Custom Transaction -->
+                    <div class="card add-ledger-card">
+                        <div class="panel-header">
+                            <h3>Simulate Received Payment</h3>
+                        </div>
+                        <p class="form-hint">Add a record here to simulate receiving money in your bank account.</p>
+                        
+                        <form id="add-ledger-form" class="ledger-form">
+                            <div class="form-group">
+                                <label for="form-utr">12-Digit UTR / Transaction ID *</label>
+                                <input type="text" id="form-utr" required placeholder="e.g. 428901928374" maxlength="16">
+                            </div>
+                            <div class="form-group">
+                                <label for="form-amount">Amount (₹) *</label>
+                                <input type="number" id="form-amount" required step="0.01" min="1" placeholder="e.g. 750.00">
+                            </div>
+                            <div class="form-group">
+                                <label for="form-payer">Payer Name</label>
+                                <input type="text" id="form-payer" placeholder="e.g. Rahul Sharma">
+                            </div>
+                            <div class="form-group">
+                                <label for="form-payer-vpa">Payer UPI ID</label>
+                                <input type="text" id="form-payer-vpa" placeholder="e.g. rahul@okaxis">
+                            </div>
+                            <div class="form-group">
+                                <label for="form-notes">Notes / Item Description</label>
+                                <input type="text" id="form-notes" placeholder="e.g. Grocery items purchase">
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100" id="btn-submit-ledger">
+                                <span>+ Add to Trusted Ledger</span>
+                            </button>
+                            <div id="ledger-form-msg" class="form-status-msg"></div>
+                        </form>
+                    </div>
+
+                    <!-- Ledger Table -->
+                    <div class="card ledger-table-card">
+                        <div class="panel-header">
+                            <h3>Current Trusted Transactions (<span id="ledger-count">0</span>)</h3>
+                            <button class="btn btn-secondary btn-sm" id="btn-refresh-ledger">Refresh</button>
+                        </div>
+                        <div class="table-responsive ledger-table-box">
+                            <table class="ledger-table">
+                                <thead>
+                                    <tr>
+                                        <th>UTR / Ref ID</th>
+                                        <th>Amount</th>
+                                        <th>Payer</th>
+                                        <th>Timestamp</th>
+                                        <th>Status</th>
+                                        <th>App Source</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ledger-tbody">
+                                    <tr><td colspan="6" class="text-center py-4 text-muted">Loading ledger entries...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+        <div class="footer-container">
+            <p><strong>CleanCheck</strong> &bull; Parakram Hackathon 26 Prototype</p>
+            <p class="footer-disclaimer">
+                Core Principle: A screenshot alone is NEVER proof of payment. Only a match with trusted transaction records can produce "Verified".
+                Forensic checks provide probabilistic risk indicators.
+            </p>
+        </div>
+    </footer>
+
+    <!-- JavaScript Application Logic -->
+    <script src="/static/app.js"></script>
+</body>
+</html>

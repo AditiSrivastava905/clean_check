@@ -1,0 +1,27 @@
+# Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Pytest cache
+.pytest_cache/
+
+# Virtual environments
+.env
+.venv/
+env/
+venv/
+ENV/
+
+# Temporary upload and ELA artifacts
+static/uploads/*
+!static/uploads/.gitkeep
+static/output/*
+!static/output/.gitkeep
+
+# Operating System & IDE
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
